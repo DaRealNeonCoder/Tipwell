@@ -14,6 +14,7 @@ import {
   type TaxInputMode,
 } from "@/lib/calc";
 import { siteConfig } from "@/lib/site";
+import AuthNav from "@/components/auth-nav";
 import ServiceWorkerRegistration from "./service-worker-registration";
 
 const STORAGE_KEY = "tipwell:diner-state";
@@ -203,6 +204,8 @@ export default function HomePage() {
           </div>
           <div className="header-actions">
             <Link className="worker-link" href="/worker">Worker tools</Link>
+            <Link className="worker-link" href="/log">Shift log</Link>
+            <AuthNav />
             <label className="region-control">
               <span className="sr-only">Currency region</span>
               <select value={region} onChange={(event) => setRegion(event.target.value as RegionKey)}>
@@ -326,7 +329,7 @@ export default function HomePage() {
           )}
         </section>
 
-        <footer className="app-footer"><span>Tipwell · private by design</span><span>Milestone 3</span></footer>
+        <footer className="app-footer"><span>Tipwell · private by design</span><span>Milestone 6</span></footer>
       </div>
     </main>
   );

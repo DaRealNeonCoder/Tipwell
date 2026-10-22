@@ -12,6 +12,7 @@ import {
   sumCents,
 } from "@/lib/calc";
 import ServiceWorkerRegistration from "../service-worker-registration";
+import AuthNav from "@/components/auth-nav";
 
 type PoolPerson = {
   id: number;
@@ -158,7 +159,7 @@ export default function WorkerPage() {
               <p className="brand-tagline">A better way to settle up.</p>
             </div>
           </div>
-          <Link className="worker-link" href="/">Diner tools</Link>
+          <div className="header-actions"><Link className="worker-link" href="/">Diner tools</Link><Link className="worker-link" href="/log">Shift log</Link><AuthNav /></div>
         </header>
 
         <section className="hero-copy worker-hero" aria-labelledby="worker-page-title">

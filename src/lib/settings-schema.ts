@@ -9,7 +9,8 @@ export const settingsValuesSchema = z.object({
   plan: z.enum(["free", "pro"]),
 });
 
-export const settingsPatchSchema = settingsValuesSchema.partial().strict();
+// Plan is server-managed; account clients may only change calculator settings.
+export const settingsPatchSchema = settingsValuesSchema.omit({ plan: true }).partial().strict();
 
 export const settingsUpdateSchema = settingsPatchSchema.refine(
   (value) => Object.keys(value).length > 0,

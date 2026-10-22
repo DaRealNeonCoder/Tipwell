@@ -1,6 +1,6 @@
 # Tipwell
 
-Tipwell is a Next.js App Router application using TypeScript, Tailwind CSS, Vitest, and ESLint. Milestone 4 adds Neon/Postgres persistence, Drizzle migrations, Better Auth, and account-owned calculator settings; shift CRUD remains scheduled for Milestone 6.
+Tipwell is a Next.js App Router application using TypeScript, Tailwind CSS, Vitest, and ESLint. Milestone 6 adds account-owned shift and workplace records, CSV export, worker summaries, and account settings while keeping the diner and worker calculators available without sign-in.
 
 ## Requirements
 
@@ -42,6 +42,8 @@ corepack pnpm db:studio
 ```
 
 The settings endpoint is account-scoped: `GET /api/settings` reads the current user's settings and `PATCH /api/settings` validates and updates them. An optional `localSettings` object can be submitted with the first update to merge calculator preferences saved in the browser.
+
+Signed-in users can manage shifts at `/log` and preferences at `/settings`. Shift and workplace API requests are validated with Zod and scoped to the authenticated user. `GET /api/shifts/export?from=YYYY-MM-DD&to=YYYY-MM-DD` returns an account-scoped CSV; service-charge share remains a separate column from tips.
 
 ## Checks
 
