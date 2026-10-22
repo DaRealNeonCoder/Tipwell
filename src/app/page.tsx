@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   calculateDinerCalculation,
   calculateDinerDecoder,
@@ -200,12 +201,15 @@ export default function HomePage() {
               <p className="brand-tagline">A better way to settle up.</p>
             </div>
           </div>
-          <label className="region-control">
-            <span className="sr-only">Currency region</span>
-            <select value={region} onChange={(event) => setRegion(event.target.value as RegionKey)}>
-              {Object.entries(REGIONS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
-            </select>
-          </label>
+          <div className="header-actions">
+            <Link className="worker-link" href="/worker">Worker tools</Link>
+            <label className="region-control">
+              <span className="sr-only">Currency region</span>
+              <select value={region} onChange={(event) => setRegion(event.target.value as RegionKey)}>
+                {Object.entries(REGIONS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+              </select>
+            </label>
+          </div>
         </header>
 
         <section className="hero-copy" aria-labelledby="page-title">
