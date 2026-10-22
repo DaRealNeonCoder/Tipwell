@@ -1,36 +1,328 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  calculateDinerCalculation,
+  calculateDinerDecoder,
+  formatCents,
+  lookupTipScreenAmount,
+  parseMoneyToCents,
+  roundTipPercentForDisplay,
+  type DinerTipBase,
+  type RoundUpMode,
+  type TaxInputMode,
+} from "@/lib/calc";
 import { siteConfig } from "@/lib/site";
+import ServiceWorkerRegistration from "./service-worker-registration";
+
+const STORAGE_KEY = "tipwell:diner-state";
+const TIP_PRESETS = [15, 18, 20] as const;
+
+const REGIONS = {
+  us: { label: "United States · USD", currency: "USD", locale: "en-US" },
+  ca: { label: "Canada · CAD", currency: "CAD", locale: "en-CA" },
+} as const;
+
+const BASE_LABELS: Record<DinerTipBase, string> = {
+  "pre-tax": "Pre-tax",
+  "pre-tax-plus-fees": "Pre-tax + fees",
+  "pre-discount": "Pre-discount",
+  "post-tax": "Post-tax",
+};
+
+const ROUND_LABELS: Record<RoundUpMode, string> = {
+  none: "No round-up",
+  total_to_dollar: "Round total to dollar",
+  per_person_to_dollar: "Round each person to dollar",
+};
+
+type RegionKey = keyof typeof REGIONS;
+type TipMode = "preset" | "custom";
+
+interface StoredState {
+  tipPercent?: number;
+  tipBase?: DinerTipBase;
+  region?: RegionKey;
+  advancedOpen?: boolean;
+}
+
+function percentText(value: number | null): string {
+  return value === null ? "—" : `${roundTipPercentForDisplay(value)}%`;
+}
+
+function parseNonNegativeMoney(value: string): number | null {
+  const cents = parseMoneyToCents(value);
+  return cents !== null && cents >= 0 ? cents : null;
+}
+
+function parseOptionalMoney(value: string): number | null {
+  return value.trim() === "" ? 0 : parseNonNegativeMoney(value);
+}
+
+function currencySymbol(): string {
+  return "$";
+}
 
 export default function HomePage() {
+  const [subtotalInput, setSubtotalInput] = useState("84.60");
+  const [peopleInput, setPeopleInput] = useState("2");
+  const [tipPercentInput, setTipPercentInput] = useState("18");
+  const [tipMode, setTipMode] = useState<TipMode>("preset");
+  const [tipBase, setTipBase] = useState<DinerTipBase>("pre-tax");
+  const [roundUpMode, setRoundUpMode] = useState<RoundUpMode>("none");
+  const [region, setRegion] = useState<RegionKey>("us");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
+
+  const [itemsSubtotalInput, setItemsSubtotalInput] = useState("");
+  const [discountInput, setDiscountInput] = useState("0.00");
+  const [feesInput, setFeesInput] = useState("0.00");
+  const [taxMode, setTaxMode] = useState<TaxInputMode>("amount");
+  const [taxAmountInput, setTaxAmountInput] = useState("0.00");
+  const [taxRateInput, setTaxRateInput] = useState("0");
+  const [serviceChargeIncluded, setServiceChargeIncluded] = useState(false);
+  const [serviceChargeInput, setServiceChargeInput] = useState("0.00");
+  const [reverseTipInput, setReverseTipInput] = useState("0.00");
+
+  /* Preferences are read once from the browser's external storage on mount. */
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const preferences = JSON.parse(saved) as StoredState;
+        if (typeof preferences.tipPercent === "number" && Number.isFinite(preferences.tipPercent)) {
+          setTipPercentInput(String(preferences.tipPercent));
+          setTipMode(TIP_PRESETS.includes(preferences.tipPercent as (typeof TIP_PRESETS)[number]) ? "preset" : "custom");
+        }
+        if (preferences.tipBase && preferences.tipBase in BASE_LABELS) setTipBase(preferences.tipBase);
+        if (preferences.region && preferences.region in REGIONS) setRegion(preferences.region);
+        if (typeof preferences.advancedOpen === "boolean") setAdvancedOpen(preferences.advancedOpen);
+      }
+    } catch {
+      // A blocked or malformed preference should never prevent the calculator from opening.
+    }
+    setHasLoadedPreferences(true);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!hasLoadedPreferences) return;
+    const preferences: StoredState = {
+      tipPercent: Number(tipPercentInput),
+      tipBase,
+      region,
+      advancedOpen,
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+  }, [advancedOpen, hasLoadedPreferences, region, tipBase, tipPercentInput]);
+
+  const money = (cents: number) => formatCents(cents, REGIONS[region].currency, REGIONS[region].locale);
+  const subtotalCents = parseMoneyToCents(subtotalInput);
+  const people = Number(peopleInput);
+  const tipPercent = Number(tipPercentInput);
+  const mainError = subtotalInput.trim() === ""
+    ? "Enter a bill subtotal."
+    : subtotalCents === null || subtotalCents < 0
+      ? "Use a valid, non-negative amount."
+      : !Number.isFinite(tipPercent) || tipPercent < 0 || tipPercent > 100
+        ? "Tip percentage must be between 0 and 100."
+        : !Number.isInteger(people) || people < 1
+          ? "People must be a whole number greater than zero."
+          : null;
+
+  const calculation = useMemo(() => {
+    if (mainError || subtotalCents === null) return null;
+    try {
+      return calculateDinerCalculation({ subtotalCents, tipPercent, people, roundUpMode });
+    } catch {
+      return null;
+    }
+  }, [mainError, people, roundUpMode, subtotalCents, tipPercent]);
+
+  const advancedValues = useMemo(() => {
+    const itemsSubtotalCents = itemsSubtotalInput.trim() === "" ? subtotalCents : parseNonNegativeMoney(itemsSubtotalInput);
+    const discountCents = parseOptionalMoney(discountInput);
+    const feesCents = parseOptionalMoney(feesInput);
+    const taxCents = parseOptionalMoney(taxAmountInput);
+    const serviceChargeCents = serviceChargeIncluded ? parseOptionalMoney(serviceChargeInput) : 0;
+    const taxRate = taxRateInput.trim() === "" ? 0 : Number(taxRateInput);
+    const invalidRate = !Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100;
+    let error: string | null = null;
+    if (itemsSubtotalCents === null) error = "Add a valid items subtotal or a valid main subtotal first.";
+    else if (discountCents === null || feesCents === null || taxCents === null || serviceChargeCents === null) error = "Use valid non-negative amounts in the decoder.";
+    else if (invalidRate) error = "Tax rate must be between 0 and 100.";
+    else if (discountCents > itemsSubtotalCents) error = "Discount cannot exceed the items subtotal.";
+    if (error || itemsSubtotalCents === null || discountCents === null || feesCents === null || taxCents === null || serviceChargeCents === null) {
+      return { error, result: null };
+    }
+    try {
+      return {
+        error: null,
+        result: calculateDinerDecoder({
+          itemsSubtotalCents,
+          discountCents,
+          feesCents,
+          taxMode,
+          taxCents,
+          taxRate,
+          serviceChargeCents,
+          base: tipBase,
+          tipPercent,
+        }),
+      };
+    } catch (decoderError) {
+      return { error: decoderError instanceof Error ? decoderError.message : "Check the decoder values.", result: null };
+    }
+  }, [discountInput, feesInput, itemsSubtotalInput, serviceChargeIncluded, serviceChargeInput, subtotalCents, taxAmountInput, taxMode, taxRateInput, tipBase, tipPercent]);
+
+  const reverseLookup = useMemo(() => {
+    const amountCents = parseNonNegativeMoney(reverseTipInput);
+    if (amountCents === null || !advancedValues.result) return null;
+    return lookupTipScreenAmount(amountCents, advancedValues.result.bill);
+  }, [advancedValues.result, reverseTipInput]);
+
+  function selectTip(value: number) {
+    setTipPercentInput(String(value));
+    setTipMode("preset");
+  }
+
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-stone-950 text-stone-100">
-      <div className="absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(circle_at_top,_rgba(253,186,116,0.18),_transparent_64%)]" />
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8 sm:px-10 lg:px-16">
-        <header className="flex items-center justify-between">
-          <p className="text-sm font-semibold tracking-[0.3em] text-orange-200 uppercase">
-            {siteConfig.name}
-          </p>
-          <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-stone-400">
-            Milestone 1
-          </span>
+    <main className="app-shell">
+      <ServiceWorkerRegistration />
+      <div className="background-glow" aria-hidden="true" />
+      <div className="app-container">
+        <header className="app-header">
+          <div className="brand-lockup">
+            <div className="brand-mark" aria-hidden="true">tw</div>
+            <div>
+              <p className="eyebrow">{siteConfig.name}</p>
+              <p className="brand-tagline">A better way to settle up.</p>
+            </div>
+          </div>
+          <label className="region-control">
+            <span className="sr-only">Currency region</span>
+            <select value={region} onChange={(event) => setRegion(event.target.value as RegionKey)}>
+              {Object.entries(REGIONS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+            </select>
+          </label>
         </header>
 
-        <section className="flex flex-1 items-center py-24">
-          <div className="max-w-3xl">
-            <p className="mb-6 text-sm font-medium tracking-[0.2em] text-orange-300 uppercase">
-              A considered beginning
-            </p>
-            <h1 className="max-w-2xl text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-7xl">
-              Make room for what matters.
-            </h1>
-            <p className="mt-8 max-w-xl text-lg leading-8 text-stone-300">
-              {siteConfig.description} The foundation is ready for the next step.
-            </p>
-          </div>
+        <section className="hero-copy" aria-labelledby="page-title">
+          <p className="eyebrow accent">Diner calculator</p>
+          <h1 id="page-title">Split the bill.<br /><em>Keep the peace.</em></h1>
+          <p>Quick, clear, and private. Your bill stays on this device.</p>
         </section>
 
-        <footer className="border-t border-white/10 pt-5 text-sm text-stone-500">
-          App shell ready
-        </footer>
+        <section className="calculator-card" aria-labelledby="calculator-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Start here</p>
+              <h2 id="calculator-title">What was the bill?</h2>
+            </div>
+            <span className="privacy-pill">No account needed</span>
+          </div>
+
+          <div className="primary-fields">
+            <div className="field field-large">
+              <label htmlFor="subtotal">Bill subtotal</label>
+              <div className="money-input">
+                 <span aria-hidden="true">{currencySymbol()}</span>
+                <input id="subtotal" inputMode="decimal" value={subtotalInput} onChange={(event) => setSubtotalInput(event.target.value)} aria-invalid={subtotalInput.trim() === "" || subtotalCents === null || subtotalCents < 0} aria-describedby="subtotal-help main-error" />
+              </div>
+              <p id="subtotal-help" className="field-help">Food and drinks before tip.</p>
+            </div>
+            <div className="field">
+              <label htmlFor="people">People</label>
+              <input id="people" type="number" min="1" step="1" inputMode="numeric" value={peopleInput} onChange={(event) => setPeopleInput(event.target.value)} aria-invalid={Boolean(mainError && (!Number.isInteger(people) || people < 1))} />
+              <p className="field-help">Split evenly, to the cent.</p>
+            </div>
+          </div>
+
+          <fieldset className="tip-choice">
+            <legend>Tip</legend>
+            <div className="preset-grid">
+              {TIP_PRESETS.map((preset) => (
+                <button key={preset} type="button" className={`preset-button ${tipMode === "preset" && tipPercentInput === String(preset) ? "selected" : ""}`} onClick={() => selectTip(preset)} aria-pressed={tipMode === "preset" && tipPercentInput === String(preset)}>{preset}%</button>
+              ))}
+              <button type="button" className={`preset-button ${tipMode === "custom" ? "selected" : ""}`} onClick={() => setTipMode("custom")} aria-pressed={tipMode === "custom"}>Custom</button>
+            </div>
+            {tipMode === "custom" && (
+              <div className="custom-tip-field">
+                <label htmlFor="custom-tip">Custom tip percentage</label>
+                <div className="percent-input">
+                  <input id="custom-tip" type="number" min="0" max="100" step="0.5" value={tipPercentInput} onChange={(event) => setTipPercentInput(event.target.value)} aria-invalid={Boolean(mainError && (tipPercent < 0 || tipPercent > 100 || !Number.isFinite(tipPercent)))} />
+                  <span aria-hidden="true">%</span>
+                </div>
+              </div>
+            )}
+          </fieldset>
+
+          <div className="field round-up-field">
+            <label htmlFor="round-up">Round-up</label>
+            <select id="round-up" value={roundUpMode} onChange={(event) => setRoundUpMode(event.target.value as RoundUpMode)}>
+              {Object.entries(ROUND_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
+
+          <p id="main-error" className={`validation-message ${mainError ? "visible" : ""}`} role="alert">{mainError ?? " "}</p>
+
+          {calculation && (
+            <div className="result-panel" aria-live="polite" aria-atomic="true">
+              <div className="result-topline"><span>Your tip</span><span>{tipPercent}% tip · {ROUND_LABELS[roundUpMode]}</span></div>
+              <div className="result-amount">{money(calculation.tipCents)}</div>
+              {calculation.roundingCents > 0 && <p className="rounding-note">Includes {money(calculation.roundingCents)} to round up.</p>}
+              <div className="result-divider" />
+              <div className="result-summary"><span>Total bill</span><strong>{money(calculation.totalCents)}</strong></div>
+              <div className="result-summary"><span>Each of {people} people</span><strong>{money(calculation.perPersonCents[0])}{calculation.perPersonCents.some((share) => share !== calculation.perPersonCents[0]) ? "*" : ""}</strong></div>
+              {calculation.perPersonCents.some((share) => share !== calculation.perPersonCents[0]) && <p className="field-help">* One or more shares differ by a cent so the total stays exact.</p>}
+            </div>
+          )}
+        </section>
+
+        <section className="advanced-section" aria-labelledby="advanced-title">
+          <button className="advanced-toggle" type="button" onClick={() => setAdvancedOpen((open) => !open)} aria-expanded={advancedOpen} aria-controls="advanced-content">
+            <span><span className="eyebrow">For curious minds</span><strong id="advanced-title">Advanced bill decoder</strong></span>
+            <span className={`chevron ${advancedOpen ? "open" : ""}`} aria-hidden="true">⌄</span>
+          </button>
+          {advancedOpen && (
+            <div id="advanced-content" className="advanced-content">
+              <p className="section-intro">Reconstruct a receipt when the payment screen is less than clear. Blank items subtotal uses your main subtotal.</p>
+              <div className="decoder-grid">
+                 <div className="field field-wide"><label htmlFor="items-subtotal">Items subtotal <span className="optional">optional</span></label><div className="money-input"><span aria-hidden="true">{currencySymbol()}</span><input id="items-subtotal" inputMode="decimal" placeholder={subtotalInput || "0.00"} value={itemsSubtotalInput} onChange={(event) => setItemsSubtotalInput(event.target.value)} /></div></div>
+                 <div className="field"><label htmlFor="discount">Discount</label><div className="money-input"><span aria-hidden="true">{currencySymbol()}</span><input id="discount" inputMode="decimal" value={discountInput} onChange={(event) => setDiscountInput(event.target.value)} /></div></div>
+                 <div className="field"><label htmlFor="fees">Fees</label><div className="money-input"><span aria-hidden="true">{currencySymbol()}</span><input id="fees" inputMode="decimal" value={feesInput} onChange={(event) => setFeesInput(event.target.value)} /></div></div>
+                 <fieldset className="field tax-field"><legend>Tax</legend><div className="segmented-control"><button type="button" className={taxMode === "amount" ? "active" : ""} onClick={() => setTaxMode("amount")} aria-pressed={taxMode === "amount"}>Amount</button><button type="button" className={taxMode === "rate" ? "active" : ""} onClick={() => setTaxMode("rate")} aria-pressed={taxMode === "rate"}>Rate</button></div>{taxMode === "amount" ? <div className="money-input"><span aria-hidden="true">{currencySymbol()}</span><input id="tax-amount" aria-label="Tax amount" inputMode="decimal" value={taxAmountInput} onChange={(event) => setTaxAmountInput(event.target.value)} /></div> : <div className="percent-input"><input id="tax-rate" aria-label="Tax rate" type="number" min="0" max="100" step="0.01" value={taxRateInput} onChange={(event) => setTaxRateInput(event.target.value)} /><span aria-hidden="true">%</span></div>}</fieldset>
+                 <div className="field field-wide"><label className="checkbox-label"><input type="checkbox" checked={serviceChargeIncluded} onChange={(event) => setServiceChargeIncluded(event.target.checked)} /><span>Service charge included</span></label>{serviceChargeIncluded && <div className="money-input"><span aria-hidden="true">{currencySymbol()}</span><input id="service-charge" aria-label="Service charge amount" inputMode="decimal" value={serviceChargeInput} onChange={(event) => setServiceChargeInput(event.target.value)} /></div>}</div>
+              </div>
+              <div className="field decoder-base"><label htmlFor="tip-base">Tip base</label><select id="tip-base" value={tipBase} onChange={(event) => setTipBase(event.target.value as DinerTipBase)}>{Object.entries(BASE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+              <p className={`validation-message ${advancedValues.error ? "visible" : ""}`} role="alert">{advancedValues.error ?? " "}</p>
+
+              {advancedValues.result && (
+                <div className="decoder-result" aria-live="polite" aria-atomic="true">
+                  <div className="decoder-result-heading"><div><p className="eyebrow">Decoded result</p><h3>{money(advancedValues.result.tipCents)} tip</h3></div><span className="base-badge">{BASE_LABELS[tipBase]}</span></div>
+                  <dl className="metrics-list">
+                    <div><dt>Tip base</dt><dd>{money(advancedValues.result.tipBaseCents)}</dd></div>
+                    <div><dt>Effective food %</dt><dd>{percentText(advancedValues.result.effectiveFoodPercent)}</dd></div>
+                    <div><dt>Difference vs pre-tax</dt><dd className={advancedValues.result.differenceVsPreTaxCents > 0 ? "positive" : ""}>{advancedValues.result.differenceVsPreTaxCents > 0 ? "+" : ""}{money(advancedValues.result.differenceVsPreTaxCents)}</dd></div>
+                    <div><dt>Tax used</dt><dd>{money(advancedValues.result.taxCents)}</dd></div>
+                  </dl>
+                  {advancedValues.result.serviceChargeWarning && <div className="warning-callout" role="note"><strong>Service charge detected</strong><span>{percentText(advancedValues.result.serviceChargePercent)} of food · combined effective rate {percentText(advancedValues.result.combinedEffectivePercent)}</span></div>}
+                </div>
+              )}
+
+              <div className="reverse-lookup">
+                <div className="section-heading compact"><div><p className="eyebrow">Payment screen check</p><h3>What tip did they suggest?</h3></div></div>
+                <p className="section-intro">Enter the tip amount from a payment screen to see what percentage it represents on each common base.</p>
+                 <div className="reverse-input-row"><label htmlFor="reverse-tip">Tip amount</label><div className="money-input"><span aria-hidden="true">{currencySymbol()}</span><input id="reverse-tip" inputMode="decimal" value={reverseTipInput} onChange={(event) => setReverseTipInput(event.target.value)} /></div></div>
+                {reverseLookup && <div className="lookup-grid" aria-live="polite">{reverseLookup.map((match) => <div className="lookup-item" key={match.base}><span>{BASE_LABELS[match.base]}</span><strong>{percentText(match.percent)}</strong>{match.matchedPreset !== null && <small>matches {match.matchedPreset}%</small>}</div>)}</div>}
+                {!reverseLookup && <p className="field-help">Enter valid decoder values above to activate the lookup.</p>}
+              </div>
+            </div>
+          )}
+        </section>
+
+        <footer className="app-footer"><span>Tipwell · private by design</span><span>Milestone 3</span></footer>
       </div>
     </main>
   );

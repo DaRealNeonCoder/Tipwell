@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateDinerCalculation,
+  calculateDinerDecoder,
   calculateDinerTipCents,
   calculateRoundUpTipCents,
   decodeTipBase,
@@ -69,5 +71,45 @@ describe("diner calculations", () => {
     expect(calculateRoundUpTipCents(4_387)).toBe(13);
     expect(calculateRoundUpTipCents(4_400)).toBe(0);
     expect(calculateRoundUpTipCents(1_237, 25)).toBe(13);
+  });
+
+  it("keeps diner totals and per-person shares exact across round-up modes", () => {
+    expect(calculateDinerCalculation({ subtotalCents: 10_000, tipPercent: 18, people: 3 })).toEqual({
+      baseTipCents: 1_800,
+      tipCents: 1_800,
+      roundingCents: 0,
+      totalCents: 11_800,
+      perPersonCents: [3_934, 3_933, 3_933],
+    });
+    expect(calculateDinerCalculation({ subtotalCents: 10_001, tipPercent: 18, people: 3, roundUpMode: "total_to_dollar" })).toMatchObject({
+      tipCents: 1_899,
+      roundingCents: 99,
+      totalCents: 11_900,
+    });
+    expect(calculateDinerCalculation({ subtotalCents: 10_000, tipPercent: 18, people: 3, roundUpMode: "per_person_to_dollar" })).toMatchObject({
+      tipCents: 2_000,
+      roundingCents: 200,
+      totalCents: 12_000,
+      perPersonCents: [4_000, 4_000, 4_000],
+    });
+  });
+
+  it("decodes tax rates and reports decoder fee context", () => {
+    const result = calculateDinerDecoder({
+      itemsSubtotalCents: 10_000,
+      discountCents: 1_000,
+      feesCents: 250,
+      taxMode: "rate",
+      taxRate: 8,
+      serviceChargeCents: 1_500,
+      base: "post-tax",
+      tipPercent: 20,
+    });
+    expect(result.taxCents).toBe(720);
+    expect(result.tipCents).toBe(1_994);
+    expect(result.effectiveFoodPercent).toBeCloseTo(19.94);
+    expect(result.differenceVsPreTaxCents).toBe(194);
+    expect(result.serviceChargeWarning).toBe(true);
+    expect(result.combinedEffectivePercent).toBeCloseTo(34.94);
   });
 });

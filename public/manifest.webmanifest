@@ -1,0 +1,17 @@
+{
+  "name": "Tipwell Diner Calculator",
+  "short_name": "Tipwell",
+  "description": "A private, precise diner calculator for tips and even splits.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9f6",
+  "theme_color": "#e16c42",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -3,7 +3,9 @@ import {
   type Cents,
   percentageOfCents,
   roundHalfUp,
+  sumCents,
 } from "./money";
+import { splitEvenly } from "./split";
 
 export type DinerTipBase = "pre-tax" | "pre-tax-plus-fees" | "post-tax" | "pre-discount";
 
@@ -23,6 +25,50 @@ export interface TipCalculationInput {
   bill: DinerBill;
   base: DinerTipBase | string;
   tipPercent: number;
+}
+
+export type RoundUpMode = "none" | "total_to_dollar" | "per_person_to_dollar";
+
+export interface DinerCalculationInput {
+  subtotalCents: Cents;
+  tipPercent: number;
+  people: number;
+  roundUpMode?: RoundUpMode;
+}
+
+export interface DinerCalculation {
+  baseTipCents: Cents;
+  tipCents: Cents;
+  roundingCents: Cents;
+  totalCents: Cents;
+  perPersonCents: Cents[];
+}
+
+export type TaxInputMode = "amount" | "rate";
+
+export interface DinerDecoderInput {
+  itemsSubtotalCents: Cents;
+  discountCents?: Cents;
+  feesCents?: Cents;
+  taxMode?: TaxInputMode;
+  taxCents?: Cents;
+  taxRate?: number;
+  serviceChargeCents?: Cents;
+  base: DinerTipBase | string;
+  tipPercent: number;
+}
+
+export interface DinerDecoderResult {
+  bill: DinerBill;
+  taxCents: Cents;
+  tipCents: Cents;
+  tipBaseCents: Cents;
+  preTaxTipCents: Cents;
+  effectiveFoodPercent: number | null;
+  differenceVsPreTaxCents: Cents;
+  serviceChargePercent: number | null;
+  serviceChargeWarning: boolean;
+  combinedEffectivePercent: number | null;
 }
 
 const TIP_BASE_ALIASES: Record<string, DinerTipBase> = {
@@ -113,6 +159,122 @@ export function calculateDinerTipCents({
 }
 
 export const calculateTipCents = calculateDinerTipCents;
+
+function validateDinerCalculationInput({
+  subtotalCents,
+  tipPercent,
+  people,
+}: DinerCalculationInput): void {
+  asCents(subtotalCents);
+  if (subtotalCents < 0) {
+    throw new RangeError("Subtotal cannot be negative");
+  }
+  if (!Number.isFinite(tipPercent) || tipPercent < 0) {
+    throw new RangeError("Tip percentage must be finite and non-negative");
+  }
+  if (!Number.isInteger(people) || people <= 0) {
+    throw new RangeError("People must be a positive integer");
+  }
+}
+
+/** Calculate a diner total, including optional whole-dollar round-up modes. */
+export function calculateDinerCalculation({
+  subtotalCents,
+  tipPercent,
+  people,
+  roundUpMode = "none",
+}: DinerCalculationInput): DinerCalculation {
+  validateDinerCalculationInput({ subtotalCents, tipPercent, people });
+  if (!["none", "total_to_dollar", "per_person_to_dollar"].includes(roundUpMode)) {
+    throw new RangeError(`Unknown round-up mode: ${roundUpMode}`);
+  }
+
+  const baseTipCents = calculateDinerTipCents({
+    bill: { subtotalCents, taxCents: 0 },
+    base: "pre-tax",
+    tipPercent,
+  });
+  const baseTotalCents = subtotalCents + baseTipCents;
+
+  if (roundUpMode === "per_person_to_dollar") {
+    const exactShares = splitEvenly(baseTotalCents, people);
+    const perPersonCents = exactShares.map((share) => share + roundUpCents(share));
+    const totalCents = sumCents(perPersonCents);
+    return {
+      baseTipCents,
+      tipCents: totalCents - subtotalCents,
+      roundingCents: totalCents - baseTotalCents,
+      totalCents,
+      perPersonCents,
+    };
+  }
+
+  const roundingCents = roundUpMode === "total_to_dollar" ? roundUpCents(baseTotalCents) : 0;
+  const totalCents = baseTotalCents + roundingCents;
+  return {
+    baseTipCents,
+    tipCents: totalCents - subtotalCents,
+    roundingCents,
+    totalCents,
+    perPersonCents: splitEvenly(totalCents, people),
+  };
+}
+
+/** Decode a bill and report the tip's food rate, tax difference, and fees. */
+export function calculateDinerDecoder({
+  itemsSubtotalCents,
+  discountCents = 0,
+  feesCents = 0,
+  taxMode = "amount",
+  taxCents = 0,
+  taxRate = 0,
+  serviceChargeCents = 0,
+  base,
+  tipPercent,
+}: DinerDecoderInput): DinerDecoderResult {
+  asCents(itemsSubtotalCents);
+  asCents(discountCents);
+  asCents(feesCents);
+  asCents(taxCents);
+  asCents(serviceChargeCents);
+  if (itemsSubtotalCents < 0 || discountCents < 0 || feesCents < 0 || taxCents < 0 || serviceChargeCents < 0) {
+    throw new RangeError("Bill amounts cannot be negative");
+  }
+  if (discountCents > itemsSubtotalCents) {
+    throw new RangeError("Discount cannot exceed the items subtotal");
+  }
+  if (!Number.isFinite(taxRate) || taxRate < 0) {
+    throw new RangeError("Tax rate must be finite and non-negative");
+  }
+  if (taxMode !== "amount" && taxMode !== "rate") {
+    throw new RangeError(`Unknown tax mode: ${taxMode}`);
+  }
+
+  const preTaxCents = itemsSubtotalCents - discountCents;
+  const decodedTaxCents = taxMode === "rate" ? percentageOfCents(preTaxCents, taxRate) : taxCents;
+  const bill: DinerBill = {
+    itemsSubtotalCents,
+    discountCents,
+    feesCents,
+    taxCents: decodedTaxCents,
+    serviceChargeCents,
+  };
+  const tipCents = calculateDinerTipCents({ bill, base, tipPercent });
+  const preTaxTipCents = calculateDinerTipCents({ bill, base: "pre-tax", tipPercent });
+
+  return {
+    bill,
+    taxCents: decodedTaxCents,
+    tipCents,
+    tipBaseCents: getDinerTipBaseCents(bill, base),
+    preTaxTipCents,
+    effectiveFoodPercent: reverseLookupTipPercent(tipCents, bill, "pre-discount"),
+    differenceVsPreTaxCents: tipCents - preTaxTipCents,
+    serviceChargePercent: serviceChargeEffectivePercent(serviceChargeCents, itemsSubtotalCents),
+    serviceChargeWarning: serviceChargeCents > 0,
+    combinedEffectivePercent: combinedEffectivePercent(serviceChargeCents, tipCents, itemsSubtotalCents),
+  };
+}
 
 /**
  * Reverse a tip amount into its effective percentage of a selected base.
