@@ -1,6 +1,6 @@
 # Tipwell
 
-Tipwell is a Next.js App Router application using TypeScript, Tailwind CSS, Vitest, and ESLint. Milestone 1 establishes the application shell and development tooling; product features, database access, and authentication are intentionally not included yet.
+Tipwell is a Next.js App Router application using TypeScript, Tailwind CSS, Vitest, and ESLint. Milestone 4 adds Neon/Postgres persistence, Drizzle migrations, Better Auth, and account-owned calculator settings; shift CRUD remains scheduled for Milestone 6.
 
 ## Requirements
 
@@ -23,7 +23,25 @@ On macOS or Linux, copy the environment file with:
 cp .env.example .env.local
 ```
 
-The environment template contains placeholders for the future database and authentication setup. No values are required for the current app shell.
+The environment template contains the server-only database and authentication settings. `DATABASE_URL` and a 32-character `BETTER_AUTH_SECRET` are required for authenticated/database requests. Google sign-in is enabled when both Google credentials are provided.
+
+## Database and authentication
+
+Better Auth owns its `user`, `session`, `account`, and `verification` tables. The generated Drizzle schema is kept in `src/db/auth-schema.ts`; regenerate it with:
+
+```bash
+corepack pnpm auth:generate
+```
+
+Application tables are defined only in `src/db/schema.ts`. Generate and apply the reproducible Drizzle migration with:
+
+```bash
+corepack pnpm db:generate
+corepack pnpm db:migrate
+corepack pnpm db:studio
+```
+
+The settings endpoint is account-scoped: `GET /api/settings` reads the current user's settings and `PATCH /api/settings` validates and updates them. An optional `localSettings` object can be submitted with the first update to merge calculator preferences saved in the browser.
 
 ## Checks
 
