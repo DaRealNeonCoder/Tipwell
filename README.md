@@ -1,6 +1,8 @@
 # Tipwell
 
-Tipwell is a Next.js App Router application using TypeScript, Tailwind CSS, Vitest, and ESLint. Milestone 6 adds account-owned shift and workplace records, CSV export, worker summaries, and account settings while keeping the diner and worker calculators available without sign-in.
+Tipwell is a mobile-first tipping calculator and shift record book. Diners can calculate, decode, split, and round a tip without an account. Tipped workers can calculate real hourly pay, split a pool, calculate tip-outs, and—after signing in—keep an exportable shift log.
+
+The app uses Next.js App Router, strict TypeScript, Tailwind CSS, Neon serverless Postgres, Drizzle ORM, Better Auth, Zod, and Vitest. Money is stored and calculated as integer cents.
 
 ## Requirements
 
@@ -16,6 +18,8 @@ corepack pnpm dev
 ```
 
 The development server is available at <http://localhost:3000>.
+
+The home page is the no-account diner calculator. Worker calculators are at `/worker`; account sign-in/sign-up is at `/auth`; the authenticated shift log is at `/log`; account preferences are at `/settings`.
 
 On macOS or Linux, copy the environment file with:
 
@@ -45,6 +49,15 @@ The settings endpoint is account-scoped: `GET /api/settings` reads the current u
 
 Signed-in users can manage shifts at `/log` and preferences at `/settings`. Shift and workplace API requests are validated with Zod and scoped to the authenticated user. `GET /api/shifts/export?from=YYYY-MM-DD&to=YYYY-MM-DD` returns an account-scoped CSV; service-charge share remains a separate column from tips.
 
+`corepack pnpm db:migrate` needs a reachable Neon/Postgres `DATABASE_URL`; it is intentionally not run against a live database in this repository checkout. The app build and local calculation tests do not require database credentials.
+
+## Product behavior
+
+- The decoder presents tip bases as options, not advice. It reports the consequence of each base and warns when an included service charge may be double-counted.
+- Included service-charge share is stored separately from cash/card tips. It is not included in tip totals, but is included as employer-paid compensation in worker hourly summaries.
+- The service worker caches the calculator shell for installable, offline calculator use. Account-backed shift actions remain online-only.
+- Billing is deliberately out of scope. `plan` and `canUseFeature` exist as the future entitlement seam, and all v1 features currently return available.
+
 ## Checks
 
 Run the following from the repository root:
@@ -65,6 +78,21 @@ corepack pnpm typecheck
 
 ```text
 src/
-├── app/       # App Router entry points, layout, and global styles
-└── lib/       # Shared application configuration and utilities
+├── app/       # Calculator, worker, auth, settings, log, API routes, and styles
+├── components/# Shared client UI
+├── db/        # Neon/Drizzle connection, app schema, generated auth schema
+└── lib/       # Calculation library, validation, auth, settings, shift data
+
+public/
+└── sw.js, manifest.webmanifest, icon.svg
+
+drizzle/
+└── Generated Postgres migration and metadata
 ```
+
+## Recommended next steps
+
+1. Configure a development Neon database and run `corepack pnpm db:migrate`.
+2. Add integration tests against a disposable Postgres database for auth, ownership, and shift CRUD.
+3. Run a real mobile Lighthouse audit in a browser-backed CI environment and tune against the measured result.
+4. Add billing only after product and entitlement requirements are defined; keep payment code outside the calculation layer.
