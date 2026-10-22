@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   calculateDinerCalculation,
@@ -75,6 +75,7 @@ export default function HomePage() {
   const [region, setRegion] = useState<RegionKey>("us");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
+  const subtotalRef = useRef<HTMLInputElement>(null);
 
   const [itemsSubtotalInput, setItemsSubtotalInput] = useState("");
   const [discountInput, setDiscountInput] = useState("0.00");
@@ -118,6 +119,10 @@ export default function HomePage() {
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
   }, [advancedOpen, hasLoadedPreferences, region, tipBase, tipPercentInput]);
+
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 700px)").matches) subtotalRef.current?.focus();
+  }, []);
 
   const money = (cents: number) => formatCents(cents, REGIONS[region].currency, REGIONS[region].locale);
   const subtotalCents = parseMoneyToCents(subtotalInput);
@@ -235,7 +240,7 @@ export default function HomePage() {
               <label htmlFor="subtotal">Bill subtotal</label>
               <div className="money-input">
                  <span aria-hidden="true">{currencySymbol()}</span>
-                <input id="subtotal" inputMode="decimal" value={subtotalInput} onChange={(event) => setSubtotalInput(event.target.value)} aria-invalid={subtotalInput.trim() === "" || subtotalCents === null || subtotalCents < 0} aria-describedby="subtotal-help main-error" />
+                 <input ref={subtotalRef} id="subtotal" inputMode="decimal" value={subtotalInput} onChange={(event) => setSubtotalInput(event.target.value)} aria-invalid={subtotalInput.trim() === "" || subtotalCents === null || subtotalCents < 0} aria-describedby="subtotal-help main-error" />
               </div>
               <p id="subtotal-help" className="field-help">Food and drinks before tip.</p>
             </div>
@@ -329,7 +334,19 @@ export default function HomePage() {
           )}
         </section>
 
-        <footer className="app-footer"><span>Tipwell · private by design</span><span>Milestone 6</span></footer>
+        <section className="audience-section" aria-labelledby="audience-title">
+          <div>
+            <p className="eyebrow accent">Made for both sides of the check</p>
+            <h2 id="audience-title">Clear enough to trust.</h2>
+            <p>Tipwell helps diners see what a suggested percentage is really based on, and helps tipped workers keep a clean record of every shift.</p>
+          </div>
+          <div className="audience-links">
+            <Link className="audience-card" href="/worker"><strong>For tipped workers</strong><span>Track real hourly rate, split pools, and calculate tip-outs.</span><span className="audience-arrow" aria-hidden="true">→</span></Link>
+            <Link className="audience-card" href="/auth"><strong>Save your records</strong><span>Create an account when you want shift history and CSV export.</span><span className="audience-arrow" aria-hidden="true">→</span></Link>
+          </div>
+        </section>
+
+        <footer className="app-footer"><span>Tipwell · private by design</span><span>Record-keeping only. Not tax advice.</span></footer>
       </div>
     </main>
   );

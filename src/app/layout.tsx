@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Viewport } from "next";
 import type { ReactNode } from "react";
 import { siteConfig } from "@/lib/site";
 import "./globals.css";
@@ -7,6 +8,10 @@ export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,
   manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#e16c42",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
