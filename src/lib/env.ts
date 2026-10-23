@@ -1,4 +1,14 @@
+import { config } from "dotenv";
 import { z } from "zod";
+
+// Next.js preserves empty inherited environment variables, which can mask a
+// value provisioned into .env.local by Neon. Keep real deployment variables
+// authoritative while treating an empty inherited value as unset locally.
+const localEnv = config({ path: ".env.local", processEnv: {}, quiet: true }).parsed ?? {};
+
+export function getEnvValue(key: string): string | undefined {
+  return process.env[key] || localEnv[key];
+}
 
 const serverEnvSchema = z
   .object({
@@ -20,14 +30,16 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
 function readServerEnv(): Record<string, string | undefined> {
   return {
-    DATABASE_URL: process.env.DATABASE_URL,
-    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-    STRIPE_PRO_PRICE_ID: process.env.STRIPE_PRO_PRICE_ID,
+    // Neon provides a pooled URL for app traffic and an unpooled fallback for
+    // environments where pooling is not enabled.
+    DATABASE_URL: getEnvValue("DATABASE_URL") || getEnvValue("DATABASE_URL_UNPOOLED"),
+    BETTER_AUTH_SECRET: getEnvValue("BETTER_AUTH_SECRET"),
+    BETTER_AUTH_URL: getEnvValue("BETTER_AUTH_URL") ?? "http://localhost:3000",
+    GOOGLE_CLIENT_ID: getEnvValue("GOOGLE_CLIENT_ID"),
+    GOOGLE_CLIENT_SECRET: getEnvValue("GOOGLE_CLIENT_SECRET"),
+    STRIPE_SECRET_KEY: getEnvValue("STRIPE_SECRET_KEY"),
+    STRIPE_WEBHOOK_SECRET: getEnvValue("STRIPE_WEBHOOK_SECRET"),
+    STRIPE_PRO_PRICE_ID: getEnvValue("STRIPE_PRO_PRICE_ID"),
   };
 }
 

@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.12",
+    "@neon/config": "^1.9.3",
+    "@neon/env": "^1.6.4",
     "@neondatabase/serverless": "1.2.0",
     "better-auth": "1.7.12",
     "dotenv": "18.0.9",

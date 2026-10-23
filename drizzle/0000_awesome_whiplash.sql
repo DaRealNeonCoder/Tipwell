@@ -96,6 +96,7 @@ CREATE TABLE "workplaces" (
 	CONSTRAINT "workplaces_default_wage_non_negative" CHECK ("workplaces"."default_wage_cents" is null or "workplaces"."default_wage_cents" >= 0)
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX "workplaces_id_user_id_idx" ON "workplaces" USING btree ("id","user_id");--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "shifts" ADD CONSTRAINT "shifts_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -108,4 +109,3 @@ CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");--> state
 CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");--> statement-breakpoint
 CREATE INDEX "shifts_user_date_idx" ON "shifts" USING btree ("user_id","date");--> statement-breakpoint
 CREATE INDEX "workplaces_user_id_idx" ON "workplaces" USING btree ("user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "workplaces_id_user_id_idx" ON "workplaces" USING btree ("id","user_id");
