@@ -254,6 +254,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .settings-form .settings-check, .settings-form .primary-button { grid-column: 1 / -1; }
 .settings-check { margin: 4px 0 0 !important; }
 .account-card { margin-top: 15px; }
+.billing-card { padding: 22px 18px; }
+.billing-card .section-intro { margin: 15px 0 14px; }
+.billing-card .field-help { margin: 8px 0 0; }
+.billing-card button { margin-top: 16px; }
 .account-details { margin: 18px 0 0; }
 .account-details > div { align-items: center; border-top: 1px solid var(--line); display: flex; justify-content: space-between; padding: 10px 0; }
 .account-details dt { color: var(--muted); font-size: 12px; }

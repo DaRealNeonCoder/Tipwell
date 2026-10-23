@@ -18,6 +18,7 @@ import { user } from "./auth-schema";
 export const regionEnum = pgEnum("region", ["US", "CA"]);
 export const tipBaseEnum = pgEnum("tip_base", ["pre_tax", "pre_tax_plus_fees", "pre_discount", "post_tax"]);
 export const planEnum = pgEnum("plan", ["free", "pro"]);
+export const webhookEventStatusEnum = pgEnum("webhook_event_status", ["pending", "processed", "failed"]);
 
 export const userSettings = pgTable(
   "user_settings",
@@ -89,6 +90,41 @@ export const shifts = pgTable(
   ],
 );
 
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+    stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
+    stripePriceId: text("stripe_price_id").notNull(),
+    status: text("status").notNull(),
+    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    lastEventCreatedAt: integer("last_event_created_at").notNull().default(0),
+    lastEventId: text("last_event_id").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("subscriptions_stripe_subscription_id_idx").on(table.stripeSubscriptionId),
+    check("subscriptions_period_order", sql`${table.currentPeriodEnd} is null or ${table.currentPeriodStart} is null or ${table.currentPeriodEnd} >= ${table.currentPeriodStart}`),
+  ],
+);
+
+export const webhookEvents = pgTable(
+  "webhook_events",
+  {
+    stripeEventId: text("stripe_event_id").primaryKey(),
+    type: text("type").notNull(),
+    eventCreatedAt: integer("event_created_at").notNull(),
+    status: webhookEventStatusEnum("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(1),
+    lastError: text("last_error"),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+  },
+);
+
 export const userSettingsRelations = relations(userSettings, ({ one }) => ({
   user: one(user, { fields: [userSettings.userId], references: [user.id] }),
 }));
@@ -103,4 +139,8 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
   workplace: one(workplaces, { fields: [shifts.workplaceId], references: [workplaces.id] }),
 }));
 
-export const appSchema = { userSettings, workplaces, shifts };
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(user, { fields: [subscriptions.userId], references: [user.id] }),
+}));
+
+export const appSchema = { userSettings, workplaces, shifts, subscriptions, webhookEvents };

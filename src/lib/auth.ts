@@ -13,6 +13,17 @@ export const auth = betterAuth({
     schema: authSchema,
   }),
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  user: {
+    additionalFields: {
+      stripeCustomerId: {
+        type: "string",
+        required: false,
+        unique: true,
+        input: false,
+        returned: false,
+      },
+    },
+  },
   // Server entry points validate the real secret before handling requests.
   // A per-process fallback only prevents Next.js build-time route collection
   // from initializing Better Auth with its own insecure default.
