@@ -49,6 +49,15 @@ async function mergeLocalPreferences() {
   }
 }
 
+async function waitForSession() {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await authClient.getSession();
+    if (result.data) return true;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  return false;
+}
+
 export default function AuthPage() {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
@@ -74,7 +83,14 @@ export default function AuthPage() {
     if (result.error) setError(errorMessage(result.error));
     else {
       await mergeLocalPreferences();
-      router.push("/log");
+      // Confirm the cookie is readable before transitioning to the protected
+      // page. This avoids a client navigation racing the session cookie write.
+      if (!(await waitForSession())) {
+        setError("Your account was created, but the session was not available yet. Please try again.");
+      } else {
+        router.push("/log");
+        router.refresh();
+      }
     }
   }
 
