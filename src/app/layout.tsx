@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Viewport } from "next";
 import type { ReactNode } from "react";
 import { siteConfig } from "@/lib/site";
+import NavigationLoading from "@/components/navigation-loading";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,13 +12,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1b5cff",
+  themeColor: "#2e9b68",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><NavigationLoading />{children}</body>
     </html>
   );
 }

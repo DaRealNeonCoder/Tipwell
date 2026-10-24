@@ -4,9 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { siteConfig } from "@/lib/site";
 import AuthNav from "./auth-nav";
+import ThemeToggle from "./theme-toggle";
 
 const primaryLinks = [
   { href: "/", label: "Diner" },
+  { href: "/split", label: "Split" },
+  { href: "/scan", label: "Scan" },
   { href: "/worker", label: "Worker" },
   { href: "/log", label: "Shift log" },
 ];
@@ -26,7 +29,7 @@ export default function AppHeader() {
       <div className="header-actions">
         <nav className="main-nav" aria-label="Primary navigation">
           {primaryLinks.map((link) => {
-            const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+            const active = link.href === "/" ? pathname === "/" || pathname.startsWith("/decoder") : pathname.startsWith(link.href);
             return (
               <Link key={link.href} className={`nav-link ${active ? "active" : ""}`} href={link.href} aria-current={active ? "page" : undefined}>
                 {link.label}
@@ -34,6 +37,7 @@ export default function AppHeader() {
             );
           })}
         </nav>
+        <ThemeToggle />
         <AuthNav />
       </div>
     </header>

@@ -6,19 +6,19 @@ export type DinerHistorySnapshot = {
   peopleInput: string;
   tipPercentInput: string;
   tipMode: "preset" | "custom";
-  tipBase: string;
   roundUpMode: string;
   region: "us" | "ca";
-  advancedOpen: boolean;
-  itemsSubtotalInput: string;
-  discountInput: string;
-  feesInput: string;
-  taxMode: "amount" | "rate";
-  taxAmountInput: string;
-  taxRateInput: string;
-  serviceChargeIncluded: boolean;
-  serviceChargeInput: string;
-  reverseTipInput: string;
+  tipBase?: string;
+  advancedOpen?: boolean;
+  itemsSubtotalInput?: string;
+  discountInput?: string;
+  feesInput?: string;
+  taxMode?: "amount" | "rate";
+  taxAmountInput?: string;
+  taxRateInput?: string;
+  serviceChargeIncluded?: boolean;
+  serviceChargeInput?: string;
+  reverseTipInput?: string;
 };
 
 export type DinerHistoryItem = {
@@ -33,12 +33,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isSnapshot(value: unknown): value is DinerHistorySnapshot {
   if (!isRecord(value)) return false;
-  const stringKeys = ["subtotalInput", "peopleInput", "tipPercentInput", "tipMode", "tipBase", "roundUpMode", "region", "itemsSubtotalInput", "discountInput", "feesInput", "taxMode", "taxAmountInput", "taxRateInput", "serviceChargeInput", "reverseTipInput"];
+  const stringKeys = ["subtotalInput", "peopleInput", "tipPercentInput", "tipMode", "roundUpMode", "region"];
+  const optionalStringKeys = ["tipBase", "itemsSubtotalInput", "discountInput", "feesInput", "taxAmountInput", "taxRateInput", "serviceChargeInput", "reverseTipInput"];
   return stringKeys.every((key) => typeof value[key] === "string")
-    && typeof value.advancedOpen === "boolean"
-    && typeof value.serviceChargeIncluded === "boolean"
+    && optionalStringKeys.every((key) => value[key] === undefined || typeof value[key] === "string")
+    && (value.advancedOpen === undefined || typeof value.advancedOpen === "boolean")
+    && (value.serviceChargeIncluded === undefined || typeof value.serviceChargeIncluded === "boolean")
     && (value.tipMode === "preset" || value.tipMode === "custom")
-    && (value.taxMode === "amount" || value.taxMode === "rate")
+    && (value.taxMode === undefined || value.taxMode === "amount" || value.taxMode === "rate")
     && (value.region === "us" || value.region === "ca");
 }
 

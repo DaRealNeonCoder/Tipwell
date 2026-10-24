@@ -1,5 +1,6 @@
 "use client";
-
+/* 
+*/
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -243,16 +244,16 @@ export default function HomePage() {
     setTipBase(saved.tipBase as DinerTipBase);
     setRoundUpMode(saved.roundUpMode as RoundUpMode);
     setRegion(saved.region);
-    setAdvancedOpen(saved.advancedOpen);
-    setItemsSubtotalInput(saved.itemsSubtotalInput);
-    setDiscountInput(saved.discountInput);
-    setFeesInput(saved.feesInput);
-    setTaxMode(saved.taxMode);
-    setTaxAmountInput(saved.taxAmountInput);
-    setTaxRateInput(saved.taxRateInput);
-    setServiceChargeIncluded(saved.serviceChargeIncluded);
-    setServiceChargeInput(saved.serviceChargeInput);
-    setReverseTipInput(saved.reverseTipInput);
+    setAdvancedOpen(saved.advancedOpen ?? false);
+    setItemsSubtotalInput(saved.itemsSubtotalInput ?? "");
+    setDiscountInput(saved.discountInput ?? "0.00");
+    setFeesInput(saved.feesInput ?? "0.00");
+    setTaxMode(saved.taxMode ?? "amount");
+    setTaxAmountInput(saved.taxAmountInput ?? "0.00");
+    setTaxRateInput(saved.taxRateInput ?? "0");
+    setServiceChargeIncluded(saved.serviceChargeIncluded ?? false);
+    setServiceChargeInput(saved.serviceChargeInput ?? "0.00");
+    setReverseTipInput(saved.reverseTipInput ?? "0.00");
   }
 
   function deleteSavedBill(id: string) {
@@ -412,8 +413,11 @@ export default function HomePage() {
             <p>Tipwell helps diners see what a suggested percentage is really based on, and helps tipped workers keep a clean record of every shift.</p>
           </div>
           <div className="audience-links">
+            <Link className="audience-card" href="/split"><strong>Split by dish</strong><span>Assign shared appetizers, drinks, and entrées to the people who had them.</span><span className="audience-arrow" aria-hidden="true">→</span></Link>
+            <Link className="audience-card" href="/scan"><strong>Scan a receipt</strong><span>Extract likely line items in-browser without uploading the receipt.</span><span className="audience-arrow" aria-hidden="true">→</span></Link>
             <Link className="audience-card" href="/worker"><strong>For tipped workers</strong><span>Track real hourly rate, split pools, and calculate tip-outs.</span><span className="audience-arrow" aria-hidden="true">→</span></Link>
             <Link className="audience-card" href="/auth"><strong>Save your records</strong><span>Create an account when you want shift history and CSV export.</span><span className="audience-arrow" aria-hidden="true">→</span></Link>
+            <Link className="audience-card" href="/scan"><strong>Scan a receipt</strong><span>Extract likely line items in-browser without uploading the receipt.</span><span className="audience-arrow" aria-hidden="true">→</span></Link>
           </div>
         </section>
 
