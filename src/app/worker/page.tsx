@@ -149,7 +149,6 @@ export default function WorkerPage() {
   return (
     <main className="app-shell">
       <ServiceWorkerRegistration />
-      <div className="background-glow" aria-hidden="true" />
       <div className="app-container worker-container">
         <header className="app-header">
           <div className="brand-lockup">

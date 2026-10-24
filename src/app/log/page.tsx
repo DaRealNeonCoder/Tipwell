@@ -153,8 +153,7 @@ export default function LogPage() {
 
   return (
     <main className="app-shell">
-      <div className="background-glow" aria-hidden="true" />
-      <div className="app-container log-container">
+       <div className="app-container log-container">
         <header className="app-header"><Link className="brand-lockup brand-link" href="/"><span className="brand-mark" aria-hidden="true">tw</span><span><span className="eyebrow">Tipwell</span><span className="brand-tagline">A better way to settle up.</span></span></Link><AuthNav /></header>
         <section className="hero-copy compact-hero" aria-labelledby="log-title"><p className="eyebrow accent">Worker records</p><h1 id="log-title">Make every shift<br /><em>add up.</em></h1><p>Keep a clear record of your hours, tips, wages, and employer-paid service charges.</p></section>
         {error && <p className="page-alert" role="alert">{error}</p>}{notice && <p className="page-notice" role="status">{notice}</p>}

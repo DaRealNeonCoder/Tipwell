@@ -140,8 +140,7 @@ export default function SettingsPage() {
 
   return (
     <main className="app-shell">
-      <div className="background-glow" aria-hidden="true" />
-      <div className="app-container narrow-container">
+       <div className="app-container narrow-container">
         <header className="app-header"><Link className="brand-lockup brand-link" href="/"><span className="brand-mark" aria-hidden="true">tw</span><span><span className="eyebrow">Tipwell</span><span className="brand-tagline">A better way to settle up.</span></span></Link><AuthNav /></header>
         <section className="hero-copy compact-hero" aria-labelledby="settings-title"><p className="eyebrow accent">Account preferences</p><h1 id="settings-title">Make Tipwell<br /><em>fit your work.</em></h1><p>These validated settings power your account calculators and worker tools.</p></section>
         {error && <p className="page-alert" role="alert">{error}</p>}

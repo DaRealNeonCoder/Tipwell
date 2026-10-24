@@ -18,7 +18,7 @@ import AuthNav from "@/components/auth-nav";
 import ServiceWorkerRegistration from "./service-worker-registration";
 
 const STORAGE_KEY = "tipwell:diner-state";
-const TIP_PRESETS = [15, 18, 20] as const;
+const TIP_PRESETS = [10, 15, 20] as const;
 
 const REGIONS = {
   us: { label: "United States · USD", currency: "USD", locale: "en-US" },
@@ -197,7 +197,6 @@ export default function HomePage() {
   return (
     <main className="app-shell">
       <ServiceWorkerRegistration />
-      <div className="background-glow" aria-hidden="true" />
       <div className="app-container">
         <header className="app-header">
           <div className="brand-lockup">
