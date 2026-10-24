@@ -68,7 +68,11 @@ export const shifts = pgTable(
     cashTipsCents: integer("cash_tips_cents").notNull().default(0),
     cardTipsCents: integer("card_tips_cents").notNull().default(0),
     tipOutCents: integer("tip_out_cents").notNull().default(0),
+    cardTipFeeCents: integer("card_tip_fee_cents").notNull().default(0),
     serviceChargeShareCents: integer("service_charge_share_cents").notNull().default(0),
+    section: text("section"),
+    daypart: text("daypart"),
+    prepMinutes: integer("prep_minutes").notNull().default(0),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -86,7 +90,9 @@ export const shifts = pgTable(
     check("shifts_cash_tips_non_negative", sql`${table.cashTipsCents} >= 0`),
     check("shifts_card_tips_non_negative", sql`${table.cardTipsCents} >= 0`),
     check("shifts_tip_out_non_negative", sql`${table.tipOutCents} >= 0`),
+    check("shifts_card_tip_fee_non_negative", sql`${table.cardTipFeeCents} >= 0`),
     check("shifts_service_charge_share_non_negative", sql`${table.serviceChargeShareCents} >= 0`),
+    check("shifts_prep_minutes_non_negative", sql`${table.prepMinutes} >= 0`),
   ],
 );
 

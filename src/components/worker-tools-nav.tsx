@@ -8,6 +8,8 @@ const links = [
   { href: "/worker/hourly", label: "Tips per hour" },
   { href: "/worker/pool", label: "Pool split" },
   { href: "/worker/tip-out", label: "Tip-out" },
+  { href: "/worker/insights", label: "Table insights" },
+  { href: "/manager", label: "Manager" },
   { href: "/log", label: "Shift log" },
 ];
 

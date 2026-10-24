@@ -123,6 +123,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .result-panel .field-help { color: var(--result-muted); }
 .result-actions { align-items: center; display: flex; gap: 9px; margin-top: 14px; }
 .result-actions span { color: var(--result-muted); font-size: 10px; }
+.print-dispute-sheet { display: none; }
 .result-save-button { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.23); border-radius: 8px; color: #fff; font-size: 11px; font-weight: 750; padding: 7px 10px; }
 .result-save-button:hover { background: rgba(255,255,255,.17); }
 .advanced-section { box-shadow: none; margin-top: 15px; }
@@ -255,6 +256,23 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .worker-card .section-intro { max-width: 580px; }
 .worker-field-grid, .worker-inline-fields { display: grid; gap: 13px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 20px; }
 .worker-card .field-wide { grid-column: 1 / -1; }
+.advanced-worker-card { margin-bottom: 15px; }
+.insight-grid { display: grid; gap: 13px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 13px; }
+.insight-panel, .policy-result { background: var(--soft); border-radius: 14px; padding: 15px; }
+.insight-panel h3 { font-size: 16px; letter-spacing: -.03em; margin: 5px 0 0; }
+.insight-list { margin-top: 13px; }
+.insight-row { align-items: center; border-top: 1px solid var(--line); display: flex; gap: 9px; justify-content: space-between; padding: 10px 0; }
+.insight-row strong, .insight-row small { display: block; }
+.insight-row strong { font-size: 12px; }
+.insight-row small { color: var(--muted); font-size: 10px; margin-top: 3px; }
+.insight-row b { font-size: 16px; white-space: nowrap; }
+.manager-card { margin-top: 2px; }
+.policy-people { display: grid; gap: 9px; margin: 18px 0 12px; }
+.policy-person { align-items: end; background: var(--soft); border-radius: 12px; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(75px, .45fr) minmax(85px, .55fr) auto; padding: 10px; }
+.policy-person .field label { font-size: 11px; }
+.policy-copy { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 10px 0 0; }
+.policy-result { margin-top: 15px; }
+.manager-disclaimer { margin: 15px 0 0; }
 .worker-result { margin-top: 8px; }
 .worker-result-grid { border-top: 1px solid rgba(255,255,255,.17); display: grid; gap: 0 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }
 .worker-result-grid > div { align-items: center; border-bottom: 1px solid rgba(255,255,255,.12); display: flex; justify-content: space-between; padding: 10px 0; }
@@ -372,6 +390,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .worker-field-grid, .worker-inline-fields { grid-template-columns: 1fr; }
   .worker-card .field-wide { grid-column: auto; }
   .worker-result-grid { grid-template-columns: 1fr; }
+  .insight-grid { grid-template-columns: 1fr; }
   .header-actions, .auth-nav { flex-wrap: wrap; justify-content: flex-end; }
   .shift-form, .settings-form, .summary-grid { grid-template-columns: 1fr; }
   .shift-form .field-wide, .settings-form .settings-check, .settings-form .primary-button { grid-column: auto; }
@@ -379,6 +398,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .shift-row-total { text-align: left; }
   .saved-bill-row { align-items: flex-start; flex-direction: column; }
   .worker-tool-grid { grid-template-columns: 1fr; }
+  .policy-person { grid-template-columns: 1fr 1fr; }
+  .policy-person .text-button { justify-self: start; }
   .item-editor-top, .scan-item { grid-template-columns: 1fr; }
   .item-price { max-width: none; }
   .scan-item .money-input { max-width: 150px; }
@@ -387,4 +408,16 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (max-width: 390px) {
   .pool-person-row { grid-template-columns: minmax(0, 1fr) minmax(64px, .5fr); }
   .pool-person-row .remove-person { grid-column: 1 / -1; justify-self: start; min-height: 28px; }
+}
+
+@media print {
+  body { background: #fff; color: #000; }
+  body > * { display: none !important; }
+  .app-shell, .app-container, .worker-tool-page, .worker-stack, .worker-stack > section, .worker-card { display: block !important; }
+  .app-header, .worker-hero, .worker-tools-nav, .app-footer, .worker-card:not(:has(.print-dispute-sheet)), .compact-result, .result-actions { display: none !important; }
+  .print-dispute-sheet { display: block; padding: 40px; }
+  .print-dispute-sheet h1 { font-size: 25px; }
+  .print-dispute-sheet dl > div { border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; max-width: 450px; padding: 10px 0; }
+  .print-dispute-sheet dt { color: #555; }
+  .print-dispute-sheet dd { font-weight: 700; margin: 0; }
 }

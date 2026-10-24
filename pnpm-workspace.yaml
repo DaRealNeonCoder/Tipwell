@@ -1,5 +1,6 @@
 allowBuilds:
   esbuild: true
+  tesseract.js: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - dotenv@18.0.9

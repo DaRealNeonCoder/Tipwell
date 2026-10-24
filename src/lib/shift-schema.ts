@@ -27,7 +27,11 @@ export const shiftPayloadSchema = z.object({
   cashTips: numericInput.optional(),
   cardTips: numericInput.optional(),
   tipOut: numericInput.optional(),
+  cardTipFee: numericInput.optional(),
   serviceChargeShare: numericInput.optional(),
+  section: z.string().trim().max(80, "Section must be 80 characters or fewer.").nullable().optional(),
+  daypart: z.string().trim().max(40, "Daypart must be 40 characters or fewer.").nullable().optional(),
+  prepMinutes: numericInput.optional(),
   notes: z.string().max(2000, "Notes must be 2,000 characters or fewer.").nullable().optional(),
 }).strict();
 
@@ -82,6 +86,16 @@ export function parseHoursToX100(value: string | number): number {
   return result;
 }
 
+export function parseNonNegativeInteger(value: string | number | null | undefined, field: string, optional = false): number {
+  if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
+    if (optional) return 0;
+    throw new InputValidationError(`${field} is required.`);
+  }
+  const parsed = Number(inputText(value));
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new InputValidationError(`${field} must be a whole, non-negative number.`);
+  return parsed;
+}
+
 export function parseShiftPayload(payload: ShiftPayload) {
   return {
     date: payload.date,
@@ -92,7 +106,11 @@ export function parseShiftPayload(payload: ShiftPayload) {
     cashTipsCents: parseNonNegativeCents(payload.cashTips, "Cash tips", true),
     cardTipsCents: parseNonNegativeCents(payload.cardTips, "Card tips", true),
     tipOutCents: parseNonNegativeCents(payload.tipOut, "Tip-out", true),
+    cardTipFeeCents: parseNonNegativeCents(payload.cardTipFee, "Card tip fee", true),
     serviceChargeShareCents: parseNonNegativeCents(payload.serviceChargeShare, "Service charge share", true),
+    section: payload.section?.trim() || null,
+    daypart: payload.daypart?.trim() || null,
+    prepMinutes: parseNonNegativeInteger(payload.prepMinutes, "Prep minutes", true),
     notes: payload.notes?.trim() || null,
   };
 }

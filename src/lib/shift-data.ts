@@ -8,7 +8,11 @@ export type ShiftLike = {
   cashTipsCents: number;
   cardTipsCents: number;
   tipOutCents: number;
+  cardTipFeeCents: number;
   serviceChargeShareCents: number;
+  section?: string | null;
+  daypart?: string | null;
+  prepMinutes: number;
   notes?: string | null;
   workplaceName?: string | null;
 };
@@ -20,23 +24,27 @@ export type ShiftTotals = {
   cashTipsCents: number;
   cardTipsCents: number;
   tipOutCents: number;
+  cardTipFeeCents: number;
   serviceChargeShareCents: number;
   totalTipsCents: number;
   netTipsCents: number;
   totalCompensationCents: number;
   averageRealHourlyRateCents: number | null;
+  prepMinutes: number;
 };
 
 export function calculateShiftTotals(shifts: readonly ShiftLike[]): ShiftTotals {
   const result = shifts.reduce<ShiftTotals>((totals, shift) => {
     const wages = roundHalfUp((shift.baseWageCents * shift.hoursX100) / 100);
-    totals.hoursX100 += shift.hoursX100;
+    totals.hoursX100 += shift.hoursX100 + roundHalfUp((shift.prepMinutes * 100) / 60);
     totals.baseWagesCents += wages;
     totals.salesCents += shift.salesCents ?? 0;
     totals.cashTipsCents += shift.cashTipsCents;
     totals.cardTipsCents += shift.cardTipsCents;
     totals.tipOutCents += shift.tipOutCents;
+    totals.cardTipFeeCents += shift.cardTipFeeCents;
     totals.serviceChargeShareCents += shift.serviceChargeShareCents;
+    totals.prepMinutes += shift.prepMinutes;
     return totals;
   }, {
     hoursX100: 0,
@@ -45,14 +53,16 @@ export function calculateShiftTotals(shifts: readonly ShiftLike[]): ShiftTotals 
     cashTipsCents: 0,
     cardTipsCents: 0,
     tipOutCents: 0,
+    cardTipFeeCents: 0,
     serviceChargeShareCents: 0,
     totalTipsCents: 0,
     netTipsCents: 0,
     totalCompensationCents: 0,
     averageRealHourlyRateCents: null,
+    prepMinutes: 0,
   });
   result.totalTipsCents = result.cashTipsCents + result.cardTipsCents;
-  result.netTipsCents = result.totalTipsCents - result.tipOutCents;
+  result.netTipsCents = result.totalTipsCents - result.tipOutCents - result.cardTipFeeCents;
   result.totalCompensationCents = result.baseWagesCents + result.netTipsCents + result.serviceChargeShareCents;
   result.averageRealHourlyRateCents = result.hoursX100 > 0
     ? roundHalfUp((result.totalCompensationCents * 100) / result.hoursX100)
@@ -70,16 +80,20 @@ function dollars(cents: number | null | undefined): string {
 }
 
 export function shiftsToCsv(shifts: readonly ShiftLike[]): string {
-  const header = ["date", "workplace", "hours", "baseWage", "sales", "cashTips", "cardTips", "tipOut", "serviceChargeShare", "notes"];
+  const header = ["date", "workplace", "section", "daypart", "hours", "prepMinutes", "baseWage", "sales", "cashTips", "cardTips", "tipOut", "cardTipFee", "serviceChargeShare", "notes"];
   const rows = shifts.map((shift) => [
     shift.date,
     shift.workplaceName ?? "",
+    shift.section ?? "",
+    shift.daypart ?? "",
     (shift.hoursX100 / 100).toFixed(2),
+    String(shift.prepMinutes),
     dollars(shift.baseWageCents),
     dollars(shift.salesCents),
     dollars(shift.cashTipsCents),
     dollars(shift.cardTipsCents),
     dollars(shift.tipOutCents),
+    dollars(shift.cardTipFeeCents),
     dollars(shift.serviceChargeShareCents),
     shift.notes ?? "",
   ]);
