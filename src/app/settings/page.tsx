@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import AuthNav from "@/components/auth-nav";
+import AppHeader from "@/components/app-header";
 import { authClient } from "@/lib/auth-client";
 
 type Settings = {
@@ -136,12 +136,12 @@ export default function SettingsPage() {
   }
 
   if (sessionPending) return <main className="app-shell"><div className="app-container"><p className="loading-state">Checking your session…</p></div></main>;
-  if (!session) return <main className="app-shell"><div className="app-container narrow-container"><header className="app-header"><Link className="brand-lockup brand-link" href="/"><span className="brand-mark" aria-hidden="true">tw</span><span className="eyebrow">Tipwell</span></Link><AuthNav /></header><section className="empty-state"><p className="eyebrow accent">Settings</p><h1>Sign in to manage settings.</h1><p>Your preferences are saved to your account.</p><Link className="primary-button inline-button" href="/auth">Sign in or create an account</Link></section></div></main>;
+   if (!session) return <main className="app-shell"><div className="app-container narrow-container"><AppHeader /><section className="empty-state"><p className="eyebrow accent">Settings</p><h1>Sign in to manage settings.</h1><p>Your preferences are saved to your account.</p><Link className="primary-button inline-button" href="/auth">Sign in or create an account</Link></section></div></main>;
 
   return (
     <main className="app-shell">
        <div className="app-container narrow-container">
-        <header className="app-header"><Link className="brand-lockup brand-link" href="/"><span className="brand-mark" aria-hidden="true">tw</span><span><span className="eyebrow">Tipwell</span><span className="brand-tagline">A better way to settle up.</span></span></Link><AuthNav /></header>
+         <AppHeader />
         <section className="hero-copy compact-hero" aria-labelledby="settings-title"><p className="eyebrow accent">Account preferences</p><h1 id="settings-title">Make Tipwell<br /><em>fit your work.</em></h1><p>These validated settings power your account calculators and worker tools.</p></section>
         {error && <p className="page-alert" role="alert">{error}</p>}
         {notice && <p className="page-notice" role="status">{notice}</p>}

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   calculateTipOutCents,
@@ -12,7 +11,7 @@ import {
   sumCents,
 } from "@/lib/calc";
 import ServiceWorkerRegistration from "../service-worker-registration";
-import AuthNav from "@/components/auth-nav";
+import AppHeader from "@/components/app-header";
 
 type PoolPerson = {
   id: number;
@@ -150,16 +149,7 @@ export default function WorkerPage() {
     <main className="app-shell">
       <ServiceWorkerRegistration />
       <div className="app-container worker-container">
-        <header className="app-header">
-          <div className="brand-lockup">
-            <div className="brand-mark" aria-hidden="true">tw</div>
-            <div>
-              <p className="eyebrow">Tipwell</p>
-              <p className="brand-tagline">A better way to settle up.</p>
-            </div>
-          </div>
-          <div className="header-actions"><Link className="worker-link" href="/">Diner tools</Link><Link className="worker-link" href="/log">Shift log</Link><AuthNav /></div>
-        </header>
+        <AppHeader />
 
         <section className="hero-copy worker-hero" aria-labelledby="worker-page-title">
           <p className="eyebrow accent">Worker tools</p>

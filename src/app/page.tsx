@@ -13,8 +13,8 @@ import {
   type RoundUpMode,
   type TaxInputMode,
 } from "@/lib/calc";
-import { siteConfig } from "@/lib/site";
-import AuthNav from "@/components/auth-nav";
+import { addDinerHistoryItem, DINER_HISTORY_STORAGE_KEY, readDinerHistory, type DinerHistoryItem, type DinerHistorySnapshot } from "@/lib/diner-history";
+import AppHeader from "@/components/app-header";
 import ServiceWorkerRegistration from "./service-worker-registration";
 
 const STORAGE_KEY = "tipwell:diner-state";
@@ -86,6 +86,7 @@ export default function HomePage() {
   const [serviceChargeIncluded, setServiceChargeIncluded] = useState(false);
   const [serviceChargeInput, setServiceChargeInput] = useState("0.00");
   const [reverseTipInput, setReverseTipInput] = useState("0.00");
+  const [savedBills, setSavedBills] = useState<DinerHistoryItem[]>([]);
 
   /* Preferences are read once from the browser's external storage on mount. */
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -102,6 +103,7 @@ export default function HomePage() {
         if (preferences.region && preferences.region in REGIONS) setRegion(preferences.region);
         if (typeof preferences.advancedOpen === "boolean") setAdvancedOpen(preferences.advancedOpen);
       }
+      setSavedBills(readDinerHistory(window.localStorage.getItem(DINER_HISTORY_STORAGE_KEY)));
     } catch {
       // A blocked or malformed preference should never prevent the calculator from opening.
     }
@@ -194,30 +196,88 @@ export default function HomePage() {
     setTipMode("preset");
   }
 
+  function currentSnapshot(): DinerHistorySnapshot {
+    return {
+      subtotalInput,
+      peopleInput,
+      tipPercentInput,
+      tipMode,
+      tipBase,
+      roundUpMode,
+      region,
+      advancedOpen,
+      itemsSubtotalInput,
+      discountInput,
+      feesInput,
+      taxMode,
+      taxAmountInput,
+      taxRateInput,
+      serviceChargeIncluded,
+      serviceChargeInput,
+      reverseTipInput,
+    };
+  }
+
+  function saveCurrentBill() {
+    if (!calculation || subtotalCents === null) return;
+    const item: DinerHistoryItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      savedAt: new Date().toISOString(),
+      snapshot: currentSnapshot(),
+    };
+    const next = addDinerHistoryItem(savedBills, item);
+    setSavedBills(next);
+    try {
+      window.localStorage.setItem(DINER_HISTORY_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Saving is a convenience; the calculator still works when storage is unavailable.
+    }
+  }
+
+  function restoreBill(item: DinerHistoryItem) {
+    const saved = item.snapshot;
+    setSubtotalInput(saved.subtotalInput);
+    setPeopleInput(saved.peopleInput);
+    setTipPercentInput(saved.tipPercentInput);
+    setTipMode(saved.tipMode);
+    setTipBase(saved.tipBase as DinerTipBase);
+    setRoundUpMode(saved.roundUpMode as RoundUpMode);
+    setRegion(saved.region);
+    setAdvancedOpen(saved.advancedOpen);
+    setItemsSubtotalInput(saved.itemsSubtotalInput);
+    setDiscountInput(saved.discountInput);
+    setFeesInput(saved.feesInput);
+    setTaxMode(saved.taxMode);
+    setTaxAmountInput(saved.taxAmountInput);
+    setTaxRateInput(saved.taxRateInput);
+    setServiceChargeIncluded(saved.serviceChargeIncluded);
+    setServiceChargeInput(saved.serviceChargeInput);
+    setReverseTipInput(saved.reverseTipInput);
+  }
+
+  function deleteSavedBill(id: string) {
+    const next = savedBills.filter((item) => item.id !== id);
+    setSavedBills(next);
+    try {
+      window.localStorage.setItem(DINER_HISTORY_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // The item is still removed from the current view if storage is unavailable.
+    }
+  }
+
   return (
     <main className="app-shell">
       <ServiceWorkerRegistration />
       <div className="app-container">
-        <header className="app-header">
-          <div className="brand-lockup">
-            <div className="brand-mark" aria-hidden="true">tw</div>
-            <div>
-              <p className="eyebrow">{siteConfig.name}</p>
-              <p className="brand-tagline">A better way to settle up.</p>
-            </div>
-          </div>
-          <div className="header-actions">
-            <Link className="worker-link" href="/worker">Worker tools</Link>
-            <Link className="worker-link" href="/log">Shift log</Link>
-            <AuthNav />
+        <AppHeader />
+        <div className="calculator-toolbar">
             <label className="region-control">
               <span className="sr-only">Currency region</span>
               <select value={region} onChange={(event) => setRegion(event.target.value as RegionKey)}>
                 {Object.entries(REGIONS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
               </select>
             </label>
-          </div>
-        </header>
+        </div>
 
         <section className="hero-copy" aria-labelledby="page-title">
           <p className="eyebrow accent">Diner calculator</p>
@@ -282,16 +342,28 @@ export default function HomePage() {
             <div className="result-panel" aria-live="polite" aria-atomic="true">
               <div className="result-topline"><span>Your tip</span><span>{tipPercent}% tip · {ROUND_LABELS[roundUpMode]}</span></div>
               <div className="result-amount">{money(calculation.tipCents)}</div>
-              {calculation.roundingCents > 0 && <p className="rounding-note">Includes {money(calculation.roundingCents)} to round up.</p>}
-              <div className="result-divider" />
+               {calculation.roundingCents > 0 && <p className="rounding-note">Includes {money(calculation.roundingCents)} to round up.</p>}
+               <div className="result-actions"><button className="result-save-button" type="button" onClick={saveCurrentBill}>Save this bill</button><span>Keep this setup on this device</span></div>
+               <div className="result-divider" />
               <div className="result-summary"><span>Total bill</span><strong>{money(calculation.totalCents)}</strong></div>
               <div className="result-summary"><span>Each of {people} people</span><strong>{money(calculation.perPersonCents[0])}{calculation.perPersonCents.some((share) => share !== calculation.perPersonCents[0]) ? "*" : ""}</strong></div>
               {calculation.perPersonCents.some((share) => share !== calculation.perPersonCents[0]) && <p className="field-help">* One or more shares differ by a cent so the total stays exact.</p>}
             </div>
           )}
-        </section>
+         </section>
 
-        <section className="advanced-section" aria-labelledby="advanced-title">
+         {savedBills.length > 0 && <section className="saved-bills-section" aria-labelledby="saved-bills-title">
+           <div className="section-heading compact"><div><p className="eyebrow">On this device</p><h2 id="saved-bills-title">Saved bills</h2></div><span className="privacy-pill">{savedBills.length} of 6</span></div>
+           <p className="section-intro">Reuse a familiar split without retyping the receipt. Saved bills never leave this browser.</p>
+           <div className="saved-bills-list">
+             {savedBills.map((item) => <article className="saved-bill-row" key={item.id}>
+               <div><strong>{money(parseMoneyToCents(item.snapshot.subtotalInput) ?? 0)} · {item.snapshot.peopleInput} people</strong><span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.savedAt))}</span></div>
+               <div className="row-actions"><button className="text-button" type="button" onClick={() => restoreBill(item)}>Use again</button><button className="text-button danger-text" type="button" onClick={() => deleteSavedBill(item.id)}>Delete</button></div>
+             </article>)}
+           </div>
+         </section>}
+
+         <section className="advanced-section" aria-labelledby="advanced-title">
           <button className="advanced-toggle" type="button" onClick={() => setAdvancedOpen((open) => !open)} aria-expanded={advancedOpen} aria-controls="advanced-content">
             <span><span className="eyebrow">For curious minds</span><strong id="advanced-title">Advanced bill decoder</strong></span>
             <span className={`chevron ${advancedOpen ? "open" : ""}`} aria-hidden="true">⌄</span>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
-import AuthNav from "@/components/auth-nav";
+import AppHeader from "@/components/app-header";
 import { canUseFeature } from "@/lib/entitlements";
 import { calculateShiftTotals, type ShiftLike } from "@/lib/shift-data";
 
@@ -149,12 +149,12 @@ export default function LogPage() {
   }, [shifts]);
 
   if (sessionPending) return <main className="app-shell"><div className="app-container"><p className="loading-state">Checking your session…</p></div></main>;
-  if (!session) return <main className="app-shell"><div className="app-container narrow-container"><header className="app-header"><Link className="brand-lockup brand-link" href="/"><span className="brand-mark" aria-hidden="true">tw</span><span className="eyebrow">Tipwell</span></Link><AuthNav /></header><section className="empty-state"><p className="eyebrow accent">Shift log</p><h1>Sign in to see your shifts.</h1><p>Your shift records belong to your account and are never shared between users.</p><Link className="primary-button inline-button" href="/auth">Sign in or create an account</Link></section></div></main>;
+   if (!session) return <main className="app-shell"><div className="app-container narrow-container"><AppHeader /><section className="empty-state"><p className="eyebrow accent">Shift log</p><h1>Sign in to see your shifts.</h1><p>Your shift records belong to your account and are never shared between users.</p><Link className="primary-button inline-button" href="/auth">Sign in or create an account</Link></section></div></main>;
 
   return (
     <main className="app-shell">
        <div className="app-container log-container">
-        <header className="app-header"><Link className="brand-lockup brand-link" href="/"><span className="brand-mark" aria-hidden="true">tw</span><span><span className="eyebrow">Tipwell</span><span className="brand-tagline">A better way to settle up.</span></span></Link><AuthNav /></header>
+         <AppHeader />
         <section className="hero-copy compact-hero" aria-labelledby="log-title"><p className="eyebrow accent">Worker records</p><h1 id="log-title">Make every shift<br /><em>add up.</em></h1><p>Keep a clear record of your hours, tips, wages, and employer-paid service charges.</p></section>
         {error && <p className="page-alert" role="alert">{error}</p>}{notice && <p className="page-notice" role="status">{notice}</p>}
         <section className="calculator-card" aria-labelledby="shift-form-title"><div className="section-heading"><div><p className="eyebrow">{shiftForm.id ? "Edit record" : "New record"}</p><h2 id="shift-form-title">Log a shift</h2></div><span className="privacy-pill">Account saved</span></div>

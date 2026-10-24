@@ -58,6 +58,7 @@ Pro subscriptions use Stripe Checkout and the Stripe billing portal. Configure a
 - The decoder presents tip bases as options, not advice. It reports the consequence of each base and warns when an included service charge may be double-counted.
 - Included service-charge share is stored separately from cash/card tips. It is not included in tip totals, but is included as employer-paid compensation in worker hourly summaries.
 - The service worker caches the calculator shell for installable, offline calculator use. Account-backed shift actions remain online-only.
+- The diner calculator can save up to six complete bill setups in browser storage for quick reuse; saved bills stay on the device and can be restored or deleted from the home page.
 - Billing uses Stripe for the Pro subscription. `plan` remains a projection used by the existing account settings, while the subscription row and verified webhook events are the billing source of truth. `canUseFeature` still returns available for the current product surface.
 
 ## Checks

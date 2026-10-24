@@ -9,7 +9,6 @@ export default function AuthNav() {
   if (!session) return <Link className="worker-link" href="/auth">Sign in</Link>;
   return (
     <span className="auth-nav">
-      <Link className="worker-link" href="/log">Shift log</Link>
       <Link className="worker-link" href="/settings">Settings</Link>
       <button className="text-button" type="button" onClick={() => void authClient.signOut({ fetchOptions: { onSuccess: () => window.location.reload() } })}>Sign out</button>
     </span>

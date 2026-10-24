@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import AuthNav from "@/components/auth-nav";
+import AppHeader from "@/components/app-header";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -103,7 +103,7 @@ export default function AuthPage() {
   return (
     <main className="app-shell">
       <div className="app-container narrow-container">
-        <header className="app-header"><Link className="brand-lockup brand-link" href="/"><span className="brand-mark" aria-hidden="true">tw</span><span><span className="eyebrow">Tipwell</span><span className="brand-tagline">A better way to settle up.</span></span></Link><AuthNav /></header>
+         <AppHeader />
         <section className="hero-copy compact-hero" aria-labelledby="auth-title"><p className="eyebrow accent">Your account</p><h1 id="auth-title">Keep your shifts<br /><em>in one place.</em></h1><p>Sign in to log shifts, keep workplace details, and export your records.</p></section>
         <section className="calculator-card auth-card" aria-labelledby="auth-form-title">
           <div className="section-heading"><div><p className="eyebrow">{mode === "sign-in" ? "Welcome back" : "Get started"}</p><h2 id="auth-form-title">{mode === "sign-in" ? "Sign in" : "Create your account"}</h2></div></div>
